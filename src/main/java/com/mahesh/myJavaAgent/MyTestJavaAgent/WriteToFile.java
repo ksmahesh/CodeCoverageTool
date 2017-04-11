@@ -6,18 +6,22 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 
 public class WriteToFile implements Runnable {
 	private boolean init = false;
-	public static BlockingQueue<String> bqOutput = new ArrayBlockingQueue<String>(100000);
+	public static BlockingQueue<HashMap<String,MapValue>> bqOutput = new ArrayBlockingQueue<HashMap<String,MapValue>>(1000);
+	public static BlockingQueue<HashMap<String,String>> testDetails = new ArrayBlockingQueue<HashMap<String,String>>(1000);
 	private static Path outputFile;
 	private static boolean createdFile; 
 	private static final String fileName = "LineCovFile.txt";
 	private static Runnable writeThread;
 	private static Runnable writeToQ;
-	private static HashMap<String,ArrayList<Integer>> currTestHash = new HashMap<String,ArrayList<Integer>>();
+	private static HashMap<String,MapValue> currTestHash = new HashMap<String,MapValue>();
+	private static String testStart = "TestStart";
+	private static String endRun = "EndRun";
 //	private static File outFile;
 	
 	public WriteToFile() {
@@ -87,19 +91,36 @@ public class WriteToFile implements Runnable {
 			BufferedWriter writer;
 			try {
 				writer = new BufferedWriter( new FileWriter( fileName));
-				for (String line=bqOutput.take(); !line.startsWith("XXX"); line=bqOutput.take()) {
+				for (HashMap<String,MapValue> testHash=bqOutput.take(); !(testHash.containsKey(WriteToFile.endRun)); testHash=bqOutput.take()) {
+//					System.out.println("%%%%%%%%%%%% Writing new hashset to a file");
 					try {
 						//Files.write(outputFile, Arrays.asList(line), Charset.forName("UTF-8"),StandardOpenOption.APPEND);
-						writer.write(line+"\n");
+						//first print the testname and other details in the testStart hash key
+						if ( WriteToFile.testDetails.peek()!= null){
+							HashMap<String,String> thisTestDetails = WriteToFile.testDetails.take();
+							writer.write(thisTestDetails.get(WriteToFile.testStart));
+						}
+						//now write every hash
+						
+						for (String className: testHash.keySet()) {
+							String packageName = testHash.get(className).getPackageName();
+							HashSet<Integer> itrHash = testHash.get(className).getLineHashSet();
+							Iterator<Integer> hashItr = itrHash.iterator();
+							while(hashItr.hasNext()) {
+								writer.write(packageName +" : " + hashItr.next()+"\n");
+							}
+						}
 					} catch (IOException e) {
 						e.printStackTrace();
 					}
 				}
+//				System.out.println("%%%%%%%%%%%% came out of the for loop");
 				writer.close();
 			} catch (IOException e1) {
 				// TODO Auto-generated catch block
 				e1.printStackTrace();
 			}
+			
 			
 		} catch ( InterruptedException e) {
 		      Thread.currentThread().interrupt();
@@ -136,52 +157,62 @@ public class WriteToFile implements Runnable {
 	}
 
 	public static String getChars(String text){
-		String test = text.replaceAll("\\d", "");
-				
-	    return test.substring(test.lastIndexOf("/")+1);
+		String[] test = text.split("/"); //text.replaceAll("\\d", "");
+		
+	    return test[test.length-1].trim();
 	}
 	//OLD addToQueue uncomment for commonUtils in 7 sec
-	public static void addToQueue(String string) {
-		String text = getChars(string);
-		int num = getNumber(string);
+	public static void addToQueue(String string, int num) {
+//		try {
+//			bqOutput.put(string+":"+num);
+//		} catch (InterruptedException e) {
+//			// TODO Auto-generated catch block
+//			e.printStackTrace();
+//		}
+//	}
+		String className = getChars(string);
+//		System.out.println("^^^^^^^^^^^^got classname as "+className);
+//		currTestHash = new HashMap<String,ArrayList<Integer>>();
 		if (num==-100) {
 //			System.out.println("^^^^^^^^^^^^got [TEST");
-			currTestHash = new HashMap<String,ArrayList<Integer>>();
 			try {
-				bqOutput.put(string);
+				bqOutput.put(currTestHash);
+//				System.out.println("^^^^^^^^^^added hash to the queue");
 			} catch (InterruptedException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
+			if (string.startsWith("XXX")) {
+//				System.out.println("^^^^^^^^^^End of the test run");
+				HashMap<String,MapValue> endRunHash = new HashMap<String,MapValue>();
+				endRunHash.put(WriteToFile.endRun,new MapValue());
+				bqOutput.add(endRunHash);
+				return;
+			}
+			currTestHash = new HashMap<String,MapValue>();
+			HashMap<String,String> testStart = new HashMap<String,String>();
+			testStart.put(WriteToFile.testStart, string);
+			WriteToFile.testDetails.add(testStart);
 			return;
 		}
+		
 //		System.out.println("^^^^^^^^^^^^got text as "+text);
 //		System.out.println("^^^^^^^^^^^^got num as "+num);
-		if (currTestHash.containsKey(text)) {
+		//HashSet<Integer> existingList = currTestHash.get(className);
+		MapValue existingMap = currTestHash.get(className);
+		if (existingMap != null) {
+			HashSet<Integer> existingList = existingMap.getLineHashSet();
 //			System.out.println("^^^^^^^^^^^^EXISITING TEXT HASH CHECK");
-			ArrayList<Integer> existingList = currTestHash.get(text);
 			if (existingList.contains(num)) {
 //				System.out.println("^^^^^^^^^^^^EXISITING TEXT AND NUMBER AND HASH CHECK^^^^^");
 				return;
 			} else {
-				try {
-					bqOutput.put(string);
-				} catch (InterruptedException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}
 				existingList.add(num);
 			}
 		} else {
-			ArrayList<Integer> newList = new ArrayList<Integer>();
-			newList.add(num);
-			currTestHash.put(text, newList);
-			try {
-				bqOutput.put(string);
-			} catch (InterruptedException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
+			MapValue newMap = new MapValue(string);
+			newMap.getLineHashSet().add(num);
+			currTestHash.put(className,newMap);
 		}
 	}
 }

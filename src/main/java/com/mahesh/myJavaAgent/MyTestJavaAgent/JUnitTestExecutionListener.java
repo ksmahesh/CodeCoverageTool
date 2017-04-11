@@ -16,8 +16,8 @@ public class JUnitTestExecutionListener extends RunListener {
 
     public void testRunFinished(Result result) throws Exception {
 //        System.out.println("XXX Number of tests executed: " + result.getRunCount());
-        WriteToFile.addToQueue("Number of tests executed: " + result.getRunCount());
-        WriteToFile.addToQueue("XXX");
+        WriteToFile.addToQueue("Number of tests executed: " + result.getRunCount(),-100);
+        WriteToFile.addToQueue("XXX",-100);
         while (!WriteToFile.bqOutput.isEmpty()) {
         	Thread.sleep(10);
         }
@@ -26,7 +26,7 @@ public class JUnitTestExecutionListener extends RunListener {
     public void testStarted(Description description) throws Exception {
     	
 //        System.out.println("[TEST] "+description.getClassName()+": " + description.getMethodName());
-        WriteToFile.addToQueue("[TEST] "+description.getClassName()+": " + description.getMethodName());
+        WriteToFile.addToQueue("[TEST] "+description.getClassName()+": " + description.getMethodName(),-100);
     }
 
     public void testFinished(Description description) throws Exception {
@@ -36,16 +36,16 @@ public class JUnitTestExecutionListener extends RunListener {
 
     public void testFailure(Failure failure) throws Exception {
 //        System.out.println("Failed: " + failure.getDescription().getMethodName());
-        WriteToFile.addToQueue("[TEST FAILURE]Failed: " + failure.getDescription().getMethodName());
+        WriteToFile.addToQueue("[TEST FAILURE]Failed: " + failure.getDescription().getMethodName(),-100);
     }
 
     public void testAssumptionFailure(Failure failure) {
 //        System.out.println("Failed: " + failure.getDescription().getMethodName());
-        WriteToFile.addToQueue("Failed: " + failure.getDescription().getMethodName());
+        WriteToFile.addToQueue("Failed: " + failure.getDescription().getMethodName(),-100);
     }
 
     public void testIgnored(Description description) throws Exception {
 //        System.out.println("Ignored: " + description.getMethodName());
-        WriteToFile.addToQueue("[TEST IGNORED] Ignored: " + description.getMethodName());
+        WriteToFile.addToQueue("[TEST IGNORED] Ignored: " + description.getMethodName(),-100);
     }
 }
