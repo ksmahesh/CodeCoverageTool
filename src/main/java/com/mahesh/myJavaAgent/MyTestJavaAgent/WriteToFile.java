@@ -12,8 +12,8 @@ import java.util.concurrent.BlockingQueue;
 
 public class WriteToFile implements Runnable {
 	private boolean init = false;
-	public static BlockingQueue<HashMap<String,MapValue>> bqOutput = new ArrayBlockingQueue<HashMap<String,MapValue>>(1000);
-	public static BlockingQueue<HashMap<String,String>> testDetails = new ArrayBlockingQueue<HashMap<String,String>>(1000);
+	public static BlockingQueue<HashMap<String,MapValue>> bqOutput = new ArrayBlockingQueue<HashMap<String,MapValue>>(10000);
+	public static BlockingQueue<HashMap<String,String>> testDetails = new ArrayBlockingQueue<HashMap<String,String>>(10000);
 	private static Path outputFile;
 	private static boolean createdFile; 
 	private static final String fileName = "LineCovFile.txt";
@@ -128,51 +128,11 @@ public class WriteToFile implements Runnable {
 		} 
 		
 	}
-//	public static void addToQueue(String string) {
-//		if (currTestHash.contains(string)) {
-//			return;
-//		}
-//		if (string.startsWith("[")||string.startsWith("xxx")) {
-//			currTestHash.add(string);
-//			if (!currTestHash.isEmpty()) {
-//				for (String out: currTestHash) {
-//					try {
-//						bqOutput.put(out);
-//					} catch (InterruptedException e) {
-//						// TODO Auto-generated catch block
-//						e.printStackTrace();
-//					}
-//				}
-//			}
-//			return;
-//		}
-//		currTestHash.add(string);
-//	}
-	public static int getNumber(String text){
-		if (text.matches(".*\\d+.*")) {
-				return Integer.parseInt(text.replaceAll("\\D", ""));
-		} else {
-			return -100;
+	public static void addToQueue(String className, String packName, int num) {
+		//start of the class line so skipping it 
+		if (num == 0) {
+			return;
 		}
-	}
-
-	public static String getChars(String text){
-		String[] test = text.split("/"); //text.replaceAll("\\d", "");
-		
-	    return test[test.length-1].trim();
-	}
-	//OLD addToQueue uncomment for commonUtils in 7 sec
-	public static void addToQueue(String string, int num) {
-//		try {
-//			bqOutput.put(string+":"+num);
-//		} catch (InterruptedException e) {
-//			// TODO Auto-generated catch block
-//			e.printStackTrace();
-//		}
-//	}
-		String className = getChars(string);
-//		System.out.println("^^^^^^^^^^^^got classname as "+className);
-//		currTestHash = new HashMap<String,ArrayList<Integer>>();
 		if (num==-100) {
 //			System.out.println("^^^^^^^^^^^^got [TEST");
 			try {
@@ -182,7 +142,7 @@ public class WriteToFile implements Runnable {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
-			if (string.startsWith("XXX")) {
+			if (className.startsWith("XXX")) {
 //				System.out.println("^^^^^^^^^^End of the test run");
 				HashMap<String,MapValue> endRunHash = new HashMap<String,MapValue>();
 				endRunHash.put(WriteToFile.endRun,new MapValue());
@@ -191,26 +151,22 @@ public class WriteToFile implements Runnable {
 			}
 			currTestHash = new HashMap<String,MapValue>();
 			HashMap<String,String> testStart = new HashMap<String,String>();
-			testStart.put(WriteToFile.testStart, string);
+			testStart.put(WriteToFile.testStart, className);
 			WriteToFile.testDetails.add(testStart);
 			return;
 		}
-		
+		// TODO: seeing negative numbers to adding this 
+		num = num<0? -1*num : num;
 //		System.out.println("^^^^^^^^^^^^got text as "+text);
 //		System.out.println("^^^^^^^^^^^^got num as "+num);
 		//HashSet<Integer> existingList = currTestHash.get(className);
 		MapValue existingMap = currTestHash.get(className);
-		if (existingMap != null) {
+		if (existingMap != null && existingMap.PackageName.equals(packName)) {
 			HashSet<Integer> existingList = existingMap.getLineHashSet();
 //			System.out.println("^^^^^^^^^^^^EXISITING TEXT HASH CHECK");
-			if (existingList.contains(num)) {
-//				System.out.println("^^^^^^^^^^^^EXISITING TEXT AND NUMBER AND HASH CHECK^^^^^");
-				return;
-			} else {
 				existingList.add(num);
-			}
 		} else {
-			MapValue newMap = new MapValue(string);
+			MapValue newMap = new MapValue(packName);
 			newMap.getLineHashSet().add(num);
 			currTestHash.put(className,newMap);
 		}
